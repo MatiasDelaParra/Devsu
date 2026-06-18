@@ -8,13 +8,16 @@ import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 @Getter
 @Setter
-@NoArgsConstructor
+@SuperBuilder
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(
         name = "customers",
@@ -39,4 +42,16 @@ public class Customer extends Person {
     @NotNull
     @Column(name = "status", nullable = false)
     private Boolean status;
+
+    public void changePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
+
+    public void changeStatus(boolean status) {
+        this.status = status;
+    }
+
+    public void deactivate() {
+        changeStatus(false);
+    }
 }

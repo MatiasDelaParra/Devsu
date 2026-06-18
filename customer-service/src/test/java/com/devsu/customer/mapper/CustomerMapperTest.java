@@ -2,10 +2,12 @@ package com.devsu.customer.mapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.devsu.customer.domain.Customer;
 import com.devsu.customer.dto.CreateCustomerRequest;
 import com.devsu.customer.dto.CustomerResponse;
 import com.devsu.customer.dto.UpdateCustomerRequest;
+import com.devsu.customer.domain.Customer;
+import com.devsu.customer.service.command.CreateCustomerCommand;
+import com.devsu.customer.service.command.UpdateCustomerCommand;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
@@ -14,7 +16,7 @@ class CustomerMapperTest {
     private final CustomerMapper mapper = Mappers.getMapper(CustomerMapper.class);
 
     @Test
-    void mapsCreateRequestToEntity() {
+    void mapsCreateRequestToCommand() {
         CreateCustomerRequest request = new CreateCustomerRequest(
                 "John Smith",
                 "MALE",
@@ -27,70 +29,84 @@ class CustomerMapperTest {
                 true
         );
 
-        Customer customer = mapper.toEntity(request);
+        CreateCustomerCommand command = mapper.toCommand(request);
 
-        assertThat(customer.getName()).isEqualTo("John Smith");
-        assertThat(customer.getGender()).isEqualTo("MALE");
-        assertThat(customer.getAge()).isEqualTo(32);
-        assertThat(customer.getIdentification()).isEqualTo("0102030405");
-        assertThat(customer.getAddress()).isEqualTo("123 Main Avenue");
-        assertThat(customer.getPhone()).isEqualTo("0999999999");
-        assertThat(customer.getCustomerId()).isEqualTo("CUS-001");
-        assertThat(customer.getPassword()).isEqualTo("secret");
-        assertThat(customer.getStatus()).isTrue();
+        assertThat(command.name()).isEqualTo("John Smith");
+        assertThat(command.gender()).isEqualTo("MALE");
+        assertThat(command.age()).isEqualTo(32);
+        assertThat(command.identification()).isEqualTo("0102030405");
+        assertThat(command.address()).isEqualTo("123 Main Avenue");
+        assertThat(command.phone()).isEqualTo("0999999999");
+        assertThat(command.customerId()).isEqualTo("CUS-001");
+        assertThat(command.password()).isEqualTo("secret");
+        assertThat(command.status()).isTrue();
     }
 
     @Test
-    void appliesOnlyProvidedUpdateFields() {
-        Customer customer = new Customer();
-        customer.setName("John Smith");
-        customer.setGender("MALE");
-        customer.setAge(32);
-        customer.setIdentification("0102030405");
-        customer.setAddress("123 Main Avenue");
-        customer.setPhone("0999999999");
-        customer.setCustomerId("CUS-001");
-        customer.setPassword("secret");
-        customer.setStatus(true);
-
+    void mapsUpdateRequestToCommand() {
         UpdateCustomerRequest request = new UpdateCustomerRequest(
                 "John Updated",
-                null,
-                null,
-                null,
+                "MALE",
+                33,
+                "0102030405",
                 "456 New Avenue",
-                null,
+                "0988888888",
                 null,
                 "new-secret",
                 false
         );
 
-        mapper.updateEntity(customer, request);
+        UpdateCustomerCommand command = mapper.toCommand(request);
 
-        assertThat(customer.getName()).isEqualTo("John Updated");
-        assertThat(customer.getGender()).isEqualTo("MALE");
-        assertThat(customer.getAddress()).isEqualTo("456 New Avenue");
-        assertThat(customer.getPassword()).isEqualTo("new-secret");
-        assertThat(customer.getStatus()).isFalse();
+        assertThat(command.name()).isEqualTo("John Updated");
+        assertThat(command.address()).isEqualTo("456 New Avenue");
+        assertThat(command.password()).isEqualTo("new-secret");
+        assertThat(command.status()).isFalse();
     }
 
     @Test
     void mapsEntityToResponseWithoutPassword() {
-        Customer customer = new Customer();
-        customer.setName("John Smith");
-        customer.setGender("MALE");
-        customer.setAge(32);
-        customer.setIdentification("0102030405");
-        customer.setAddress("123 Main Avenue");
-        customer.setPhone("0999999999");
-        customer.setCustomerId("CUS-001");
-        customer.setPassword("secret");
-        customer.setStatus(true);
+        Customer customer = customer();
 
         CustomerResponse response = mapper.toResponse(customer);
 
         assertThat(response.name()).isEqualTo("John Smith");
         assertThat(response.customerId()).isEqualTo("CUS-001");
         assertThat(response.status()).isTrue();
+    }
+
+    @Test
+    void updatesOnlyNonSensitiveCustomerFields() {
+        Customer customer = customer();
+        UpdateCustomerCommand command = UpdateCustomerCommand.builder()
+                .name("Jane Smith")
+                .address("456 New Avenue")
+                .customerId("CUS-002")
+                .password("raw-password")
+                .status(false)
+                .build();
+
+        mapper.updateCustomer(command, customer);
+
+        assertThat(customer.getName()).isEqualTo("Jane Smith");
+        assertThat(customer.getAddress()).isEqualTo("456 New Avenue");
+        assertThat(customer.getCustomerId()).isEqualTo("CUS-002");
+        assertThat(customer.getPassword()).isEqualTo("encoded-secret");
+        assertThat(customer.getStatus()).isTrue();
+        assertThat(customer.getIdentification()).isEqualTo("0102030405");
+    }
+
+    private Customer customer() {
+        return Customer.builder()
+                .name("John Smith")
+                .gender("MALE")
+                .age(32)
+                .identification("0102030405")
+                .address("123 Main Avenue")
+                .phone("0999999999")
+                .customerId("CUS-001")
+                .password("encoded-secret")
+                .status(true)
+                .build();
     }
 }
