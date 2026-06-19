@@ -1,9 +1,12 @@
 package com.devsu.customer.service;
 
 import com.devsu.customer.domain.Customer;
+import com.devsu.customer.event.CustomerEventFactory;
+import com.devsu.customer.event.CustomerEventType;
 import com.devsu.customer.exception.BusinessException;
 import com.devsu.customer.exception.CustomerNotFoundException;
 import com.devsu.customer.mapper.CustomerMapper;
+import com.devsu.customer.outbox.OutboxEventRepository;
 import com.devsu.customer.repository.CustomerRepository;
 import com.devsu.customer.service.command.CreateCustomerCommand;
 import com.devsu.customer.service.command.UpdateCustomerCommand;
@@ -22,11 +25,15 @@ public class CustomerService {
     private final CustomerFactory customerFactory;
     private final CustomerMapper customerMapper;
     private final PasswordEncoder passwordEncoder;
+    private final CustomerEventFactory customerEventFactory;
+    private final OutboxEventRepository outboxEventRepository;
 
     @Transactional
     public Customer createCustomer(CreateCustomerCommand command) {
         uniquenessValidator.validateForCreation(command.identification(), command.customerId());
-        return customerRepository.save(customerFactory.create(command));
+        Customer customer = customerRepository.save(customerFactory.create(command));
+        saveEvent(customer, CustomerEventType.CUSTOMER_CREATED);
+        return customer;
     }
 
     @Transactional(readOnly = true)
@@ -45,6 +52,7 @@ public class CustomerService {
         uniquenessValidator.validateForUpdate(customer, command.identification(), command.customerId());
         customerMapper.updateCustomer(command, customer);
         updateSensitiveFields(customer, command);
+        saveEvent(customer, CustomerEventType.CUSTOMER_UPDATED);
         return customer;
     }
 
@@ -55,12 +63,15 @@ public class CustomerService {
         }
         Customer customer = findRequiredCustomer(customerId);
         customer.changeStatus(status);
+        saveEvent(customer, CustomerEventType.CUSTOMER_STATUS_CHANGED);
         return customer;
     }
 
     @Transactional
     public void softDeleteCustomer(String customerId) {
-        findRequiredCustomer(customerId).deactivate();
+        Customer customer = findRequiredCustomer(customerId);
+        customer.deactivate();
+        saveEvent(customer, CustomerEventType.CUSTOMER_DELETED);
     }
 
     private Customer findRequiredCustomer(String customerId) {
@@ -79,5 +90,9 @@ public class CustomerService {
 
     private boolean hasText(String value) {
         return value != null && !value.isBlank();
+    }
+
+    private void saveEvent(Customer customer, CustomerEventType eventType) {
+        outboxEventRepository.save(customerEventFactory.create(customer, eventType));
     }
 }

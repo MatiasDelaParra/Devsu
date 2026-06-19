@@ -1,5 +1,5 @@
 server:
-  port: ${SERVER_PORT:8081}
+  port: ${SERVER_PORT:9082}
 
 spring:
   application:
@@ -28,6 +28,20 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USERNAME:guest}
     password: ${RABBITMQ_PASSWORD:guest}
+
+customer:
+  messaging:
+    exchange: ${CUSTOMER_EVENTS_EXCHANGE:customer.events}
+    routing-keys:
+      created: ${CUSTOMER_CREATED_ROUTING_KEY:customer.created}
+      updated: ${CUSTOMER_UPDATED_ROUTING_KEY:customer.updated}
+      status-changed: ${CUSTOMER_STATUS_CHANGED_ROUTING_KEY:customer.status-changed}
+      deleted: ${CUSTOMER_DELETED_ROUTING_KEY:customer.deleted}
+    publisher:
+      batch-size: ${OUTBOX_BATCH_SIZE:50}
+      maximum-retries: ${OUTBOX_MAXIMUM_RETRIES:5}
+      fixed-delay: ${OUTBOX_FIXED_DELAY_MS:5000}
+      initial-delay: ${OUTBOX_INITIAL_DELAY_MS:5000}
 
 management:
   endpoints:
