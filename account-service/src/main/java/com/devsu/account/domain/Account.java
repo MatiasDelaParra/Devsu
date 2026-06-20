@@ -78,6 +78,15 @@ public class Account {
         }
     }
 
+    public BigDecimal applyMovement(BigDecimal value) {
+        BigDecimal resultingBalance = currentBalance.add(value);
+        if (resultingBalance.signum() < 0) {
+            throw new IllegalArgumentException("Saldo no disponible");
+        }
+        currentBalance = resultingBalance;
+        return currentBalance;
+    }
+
     @PrePersist
     void initializeTimestamps() {
         Instant now = Instant.now();

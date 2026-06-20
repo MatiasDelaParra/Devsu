@@ -12,6 +12,7 @@ import com.devsu.account.domain.AccountType;
 import com.devsu.account.domain.CustomerSnapshot;
 import com.devsu.account.repository.AccountRepository;
 import com.devsu.account.repository.CustomerSnapshotRepository;
+import com.devsu.account.repository.MovementRepository;
 import java.math.BigDecimal;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,8 +59,12 @@ class AccountApiIntegrationTest {
     @Autowired
     private CustomerSnapshotRepository customerSnapshotRepository;
 
+    @Autowired
+    private MovementRepository movementRepository;
+
     @BeforeEach
     void setUp() {
+        movementRepository.deleteAll();
         accountRepository.deleteAll();
         customerSnapshotRepository.deleteAll();
         customerSnapshotRepository.save(activeCustomer());
@@ -163,6 +168,49 @@ class AccountApiIntegrationTest {
                                 """))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400));
+    }
+
+    @Test
+    void postMovementUpdatesBalanceAndPersistsTransaction() throws Exception {
+        accountRepository.save(account("478758"));
+
+        mockMvc.perform(post("/api/movimientos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "numeroCuenta": "478758",
+                                  "valor": -575
+                                }
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.tipoMovimiento").value("DEBIT"))
+                .andExpect(jsonPath("$.valor").value(-575))
+                .andExpect(jsonPath("$.saldo").value(1425))
+                .andExpect(jsonPath("$.numeroCuenta").value("478758"));
+
+        mockMvc.perform(get("/api/cuentas/478758"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.saldoDisponible").value(1425));
+    }
+
+    @Test
+    void postMovementReturnsExpectedErrorWhenBalanceIsInsufficient() throws Exception {
+        accountRepository.save(account("478758"));
+
+        mockMvc.perform(post("/api/movimientos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "numeroCuenta": "478758",
+                                  "valor": -2001
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Saldo no disponible"));
+
+        mockMvc.perform(get("/api/cuentas/478758"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.saldoDisponible").value(2000));
     }
 
     private CustomerSnapshot activeCustomer() {

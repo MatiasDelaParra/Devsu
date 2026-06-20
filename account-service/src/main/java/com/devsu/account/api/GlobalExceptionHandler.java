@@ -4,6 +4,7 @@ import com.devsu.account.exception.AccountNotFoundException;
 import com.devsu.account.exception.BusinessException;
 import com.devsu.account.exception.CustomerSnapshotNotFoundException;
 import com.devsu.account.exception.DuplicateAccountException;
+import com.devsu.account.exception.MovementNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.time.Instant;
@@ -24,12 +25,13 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private static final Map<String, String> API_FIELD_NAMES = Map.of(
-            "accountNumber", "numeroCuenta",
-            "accountType", "tipoCuenta",
-            "initialBalance", "saldoInicial",
-            "status", "estado",
-            "customerId", "clienteId"
+    private static final Map<String, String> API_FIELD_NAMES = Map.ofEntries(
+            Map.entry("value", "valor"),
+            Map.entry("accountNumber", "numeroCuenta"),
+            Map.entry("accountType", "tipoCuenta"),
+            Map.entry("initialBalance", "saldoInicial"),
+            Map.entry("status", "estado"),
+            Map.entry("customerId", "clienteId")
     );
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -49,7 +51,8 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler({
             AccountNotFoundException.class,
-            CustomerSnapshotNotFoundException.class
+            CustomerSnapshotNotFoundException.class,
+            MovementNotFoundException.class
     })
     public ResponseEntity<ErrorResponse> handleNotFound(
             BusinessException exception,
