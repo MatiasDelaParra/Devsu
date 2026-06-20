@@ -51,6 +51,17 @@ public class Movement {
     @JoinColumn(name = "account_id", nullable = false, updatable = false)
     private Account account;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "reversal_of_id", updatable = false)
+    private Movement reversalOf;
+
+    @Column(name = "reversal_reason", updatable = false, length = 200)
+    private String reversalReason;
+
+    public boolean isReversal() {
+        return reversalOf != null;
+    }
+
     @PrePersist
     void initializeOccurredAt() {
         if (occurredAt == null) {

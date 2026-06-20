@@ -5,6 +5,7 @@ import com.devsu.account.domain.Movement;
 import com.devsu.account.domain.MovementType;
 import com.devsu.account.dto.CreateMovementRequest;
 import com.devsu.account.dto.MovementResponse;
+import com.devsu.account.dto.ReverseMovementRequest;
 import com.devsu.account.exception.AccountNotFoundException;
 import com.devsu.account.exception.InactiveAccountException;
 import com.devsu.account.exception.InsufficientBalanceException;
@@ -63,11 +64,51 @@ public class MovementService {
                 .orElseThrow(() -> new MovementNotFoundException(movementId));
     }
 
+    @Transactional
+    public MovementResponse reverseMovement(UUID movementId, ReverseMovementRequest request) {
+        Movement original = movementRepository.findByIdForUpdate(movementId)
+                .orElseThrow(() -> new MovementNotFoundException(movementId));
+        if (original.isReversal()) {
+            throw new InvalidMovementException("Un movimiento de reverso no puede ser reversado");
+        }
+
+        return movementRepository.findByReversalOfId(movementId)
+                .map(movementMapper::toResponse)
+                .orElseGet(() -> createReversal(original, request.reason()));
+    }
+
     @Transactional(readOnly = true)
     public Page<MovementResponse> listMovements(String accountNumber, Pageable pageable) {
         Page<Movement> movements = accountNumber == null || accountNumber.isBlank()
                 ? movementRepository.findAll(pageable)
                 : movementRepository.findByAccountAccountNumber(accountNumber, pageable);
         return movements.map(movementMapper::toResponse);
+    }
+
+    private MovementResponse createReversal(Movement original, String reason) {
+        String accountNumber = original.getAccount().getAccountNumber();
+        Account account = accountRepository.findByAccountNumberForUpdate(accountNumber)
+                .orElseThrow(() -> new AccountNotFoundException(accountNumber));
+        if (!Boolean.TRUE.equals(account.getStatus())) {
+            throw new InactiveAccountException(accountNumber);
+        }
+
+        BigDecimal reversalValue = original.getValue().negate();
+        BigDecimal balance;
+        try {
+            balance = account.applyMovement(reversalValue);
+        } catch (IllegalArgumentException exception) {
+            throw new InsufficientBalanceException();
+        }
+
+        Movement reversal = Movement.builder()
+                .movementType(reversalValue.signum() > 0 ? MovementType.CREDIT : MovementType.DEBIT)
+                .value(reversalValue)
+                .balance(balance)
+                .account(account)
+                .reversalOf(original)
+                .reversalReason(reason.trim())
+                .build();
+        return movementMapper.toResponse(movementRepository.save(reversal));
     }
 }

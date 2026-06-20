@@ -1,5 +1,6 @@
 package com.devsu.account.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -66,7 +67,7 @@ class AccountApiIntegrationTest {
 
     @BeforeEach
     void setUp() {
-        movementRepository.deleteAll();
+        movementRepository.deleteAllInBatch();
         accountRepository.deleteAll();
         customerSnapshotRepository.deleteAll();
         customerSnapshotRepository.save(activeCustomer());
@@ -213,6 +214,50 @@ class AccountApiIntegrationTest {
         mockMvc.perform(get("/api/cuentas/478758"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.saldoDisponible").value(2000));
+    }
+
+    @Test
+    void putMovementReversalRestoresBalanceAndIsIdempotent() throws Exception {
+        accountRepository.save(account("478758"));
+        mockMvc.perform(post("/api/movimientos")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "numeroCuenta": "478758",
+                                  "valor": -575
+                                }
+                                """))
+                .andExpect(status().isCreated());
+        var original = movementRepository.findAll().getFirst();
+
+        mockMvc.perform(put("/api/movimientos/{id}/reverso", original.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "motivo": "Operación duplicada"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tipoMovimiento").value("CREDIT"))
+                .andExpect(jsonPath("$.valor").value(575))
+                .andExpect(jsonPath("$.saldo").value(2000))
+                .andExpect(jsonPath("$.reversoDe").value(original.getId().toString()))
+                .andExpect(jsonPath("$.motivoReverso").value("Operación duplicada"));
+
+        mockMvc.perform(put("/api/movimientos/{id}/reverso", original.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "motivo": "Solicitud repetida"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.motivoReverso").value("Operación duplicada"));
+
+        mockMvc.perform(get("/api/cuentas/478758"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.saldoDisponible").value(2000));
+        assertThat(movementRepository.count()).isEqualTo(2);
     }
 
     @Test

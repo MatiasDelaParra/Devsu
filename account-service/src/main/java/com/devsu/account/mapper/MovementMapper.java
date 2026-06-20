@@ -14,7 +14,9 @@ public class MovementMapper {
                 movement.getMovementType(),
                 movement.getValue(),
                 movement.getBalance(),
-                movement.getAccount().getAccountNumber()
+                movement.getAccount().getAccountNumber(),
+                movement.getReversalOf() == null ? null : movement.getReversalOf().getId(),
+                movement.getReversalReason()
         );
     }
 }

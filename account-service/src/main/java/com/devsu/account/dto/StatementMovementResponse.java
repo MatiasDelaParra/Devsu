@@ -11,6 +11,8 @@ public record StatementMovementResponse(
         @JsonProperty("fecha") Instant occurredAt,
         @JsonProperty("tipoMovimiento") MovementType movementType,
         @JsonProperty("valor") BigDecimal value,
-        @JsonProperty("saldo") BigDecimal balance
+        @JsonProperty("saldo") BigDecimal balance,
+        @JsonProperty("reversoDe") UUID reversalOfId,
+        @JsonProperty("motivoReverso") String reversalReason
 ) {
 }

@@ -12,6 +12,8 @@ public record MovementResponse(
         @JsonProperty("tipoMovimiento") MovementType movementType,
         @JsonProperty("valor") BigDecimal value,
         @JsonProperty("saldo") BigDecimal balance,
-        @JsonProperty("numeroCuenta") String accountNumber
+        @JsonProperty("numeroCuenta") String accountNumber,
+        @JsonProperty("reversoDe") UUID reversalOfId,
+        @JsonProperty("motivoReverso") String reversalReason
 ) {
 }

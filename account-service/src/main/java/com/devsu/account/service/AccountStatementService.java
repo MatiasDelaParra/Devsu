@@ -76,7 +76,9 @@ public class AccountStatementService {
                 movement.getOccurredAt(),
                 movement.getMovementType(),
                 movement.getValue(),
-                movement.getBalance()
+                movement.getBalance(),
+                movement.getReversalOf() == null ? null : movement.getReversalOf().getId(),
+                movement.getReversalReason()
         );
     }
 }

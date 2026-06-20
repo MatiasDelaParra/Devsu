@@ -2,6 +2,7 @@ package com.devsu.account.api;
 
 import com.devsu.account.dto.CreateMovementRequest;
 import com.devsu.account.dto.MovementResponse;
+import com.devsu.account.dto.ReverseMovementRequest;
 import com.devsu.account.service.MovementService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -47,5 +49,13 @@ public class MovementController {
             @PathVariable UUID movimientoId
     ) {
         return ResponseEntity.ok(movementService.getMovement(movimientoId));
+    }
+
+    @PutMapping("/{movimientoId}/reverso")
+    public ResponseEntity<MovementResponse> reverseMovement(
+            @PathVariable UUID movimientoId,
+            @Valid @RequestBody ReverseMovementRequest request
+    ) {
+        return ResponseEntity.ok(movementService.reverseMovement(movimientoId, request));
     }
 }
