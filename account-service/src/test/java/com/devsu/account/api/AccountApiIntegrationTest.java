@@ -10,6 +10,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.devsu.account.domain.Account;
 import com.devsu.account.domain.AccountType;
 import com.devsu.account.domain.CustomerSnapshot;
+import com.devsu.account.domain.Movement;
+import com.devsu.account.domain.MovementType;
 import com.devsu.account.repository.AccountRepository;
 import com.devsu.account.repository.CustomerSnapshotRepository;
 import com.devsu.account.repository.MovementRepository;
@@ -213,6 +215,64 @@ class AccountApiIntegrationTest {
                 .andExpect(jsonPath("$.saldoDisponible").value(2000));
     }
 
+    @Test
+    void getReportReturnsAccountsAndOnlyMovementsInsideInclusiveRange() throws Exception {
+        Account firstAccount = accountRepository.save(account("100001"));
+        accountRepository.save(account("100002"));
+        movementRepository.save(movement(
+                firstAccount,
+                "2026-06-01T00:00:00Z",
+                new BigDecimal("-100.00"),
+                new BigDecimal("1900.00")
+        ));
+        movementRepository.save(movement(
+                firstAccount,
+                "2026-06-30T23:59:59Z",
+                new BigDecimal("50.00"),
+                new BigDecimal("1950.00")
+        ));
+        movementRepository.save(movement(
+                firstAccount,
+                "2026-07-01T00:00:00Z",
+                new BigDecimal("25.00"),
+                new BigDecimal("1975.00")
+        ));
+
+        mockMvc.perform(get("/api/reportes")
+                        .param("fecha", "2026-06-01,2026-06-30")
+                        .param("cliente", CUSTOMER_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.clienteId").value(CUSTOMER_ID))
+                .andExpect(jsonPath("$.cliente").value("Jose Lema"))
+                .andExpect(jsonPath("$.fechaDesde").value("2026-06-01"))
+                .andExpect(jsonPath("$.fechaHasta").value("2026-06-30"))
+                .andExpect(jsonPath("$.cuentas.length()").value(2))
+                .andExpect(jsonPath("$.cuentas[0].numeroCuenta").value("100001"))
+                .andExpect(jsonPath("$.cuentas[0].movimientos.length()").value(2))
+                .andExpect(jsonPath("$.cuentas[0].movimientos[0].valor").value(-100))
+                .andExpect(jsonPath("$.cuentas[0].movimientos[1].valor").value(50))
+                .andExpect(jsonPath("$.cuentas[1].numeroCuenta").value("100002"))
+                .andExpect(jsonPath("$.cuentas[1].movimientos.length()").value(0));
+    }
+
+    @Test
+    void getReportRejectsInvalidDateRange() throws Exception {
+        mockMvc.perform(get("/api/reportes")
+                        .param("fecha", "2026-06-30,2026-06-01")
+                        .param("cliente", CUSTOMER_ID))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message")
+                        .value("La fecha inicial no puede ser posterior a la fecha final"));
+    }
+
+    @Test
+    void getReportReturnsNotFoundForUnknownCustomer() throws Exception {
+        mockMvc.perform(get("/api/reportes")
+                        .param("fecha", "2026-06-01,2026-06-30")
+                        .param("cliente", "MISSING"))
+                .andExpect(status().isNotFound());
+    }
+
     private CustomerSnapshot activeCustomer() {
         Instant now = Instant.parse("2026-06-20T12:00:00Z");
         return CustomerSnapshot.builder()
@@ -233,6 +293,21 @@ class AccountApiIntegrationTest {
                 .currentBalance(new BigDecimal("2000.00"))
                 .status(true)
                 .customerId(CUSTOMER_ID)
+                .build();
+    }
+
+    private Movement movement(
+            Account account,
+            String occurredAt,
+            BigDecimal value,
+            BigDecimal balance
+    ) {
+        return Movement.builder()
+                .occurredAt(Instant.parse(occurredAt))
+                .movementType(value.signum() > 0 ? MovementType.CREDIT : MovementType.DEBIT)
+                .value(value)
+                .balance(balance)
+                .account(account)
                 .build();
     }
 

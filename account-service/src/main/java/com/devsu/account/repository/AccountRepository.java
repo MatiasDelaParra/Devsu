@@ -21,4 +21,6 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
     boolean existsByAccountNumber(String accountNumber);
 
     List<Account> findByCustomerId(String customerId);
+
+    List<Account> findByCustomerIdOrderByAccountNumberAsc(String customerId);
 }
