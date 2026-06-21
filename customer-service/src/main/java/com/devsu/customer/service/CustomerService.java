@@ -5,12 +5,14 @@ import com.devsu.customer.event.CustomerEventFactory;
 import com.devsu.customer.event.CustomerEventType;
 import com.devsu.customer.exception.BusinessException;
 import com.devsu.customer.exception.CustomerNotFoundException;
+import com.devsu.customer.exception.ImmutableCustomerIdException;
 import com.devsu.customer.mapper.CustomerMapper;
 import com.devsu.customer.outbox.OutboxEventRepository;
 import com.devsu.customer.repository.CustomerRepository;
 import com.devsu.customer.service.command.CreateCustomerCommand;
 import com.devsu.customer.service.command.UpdateCustomerCommand;
 import java.util.List;
+import java.util.Objects;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -49,7 +51,8 @@ public class CustomerService {
     @Transactional
     public Customer updateCustomer(String customerId, UpdateCustomerCommand command) {
         Customer customer = findRequiredCustomer(customerId);
-        uniquenessValidator.validateForUpdate(customer, command.identification(), command.customerId());
+        validateImmutableCustomerId(customer, command.customerId());
+        uniquenessValidator.validateForUpdate(customer, command.identification());
         customerMapper.updateCustomer(command, customer);
         updateSensitiveFields(customer, command);
         saveEvent(customer, CustomerEventType.CUSTOMER_UPDATED);
@@ -85,6 +88,13 @@ public class CustomerService {
         }
         if (command.status() != null) {
             customer.changeStatus(command.status());
+        }
+    }
+
+    private void validateImmutableCustomerId(Customer customer, String requestedCustomerId) {
+        if (requestedCustomerId != null
+                && !Objects.equals(customer.getCustomerId(), requestedCustomerId)) {
+            throw new ImmutableCustomerIdException();
         }
     }
 

@@ -10,8 +10,10 @@ import com.devsu.account.domain.CustomerSnapshot;
 import com.devsu.account.event.CustomerEvent;
 import com.devsu.account.event.CustomerEventType;
 import com.devsu.account.repository.CustomerSnapshotRepository;
+import com.devsu.account.repository.ProcessedCustomerEventRepository;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,11 +29,14 @@ class CustomerSnapshotServiceTest {
     @Mock
     private CustomerSnapshotRepository repository;
 
+    @Mock
+    private ProcessedCustomerEventRepository processedEventRepository;
+
     private CustomerSnapshotService service;
 
     @BeforeEach
     void setUp() {
-        service = new CustomerSnapshotService(repository);
+        service = new CustomerSnapshotService(repository, processedEventRepository);
     }
 
     @Test
@@ -51,6 +56,9 @@ class CustomerSnapshotServiceTest {
         assertThat(snapshot.getStatus()).isTrue();
         assertThat(snapshot.getCreatedAt()).isEqualTo(OCCURRED_AT);
         assertThat(snapshot.getUpdatedAt()).isEqualTo(OCCURRED_AT);
+        verify(processedEventRepository).save(
+                org.mockito.ArgumentMatchers.any()
+        );
     }
 
     @Test
@@ -84,19 +92,23 @@ class CustomerSnapshotServiceTest {
     @Test
     void processingSameEventTwiceDoesNotCreateDuplicateSnapshot() {
         CustomerEvent event = event(CustomerEventType.CUSTOMER_CREATED, true);
-        CustomerSnapshot persisted = snapshot("Jane Doe", true, OCCURRED_AT);
-        when(repository.findByCustomerId("customer-1"))
-                .thenReturn(Optional.empty())
-                .thenReturn(Optional.of(persisted));
+        when(processedEventRepository.existsById(event.eventId()))
+                .thenReturn(false)
+                .thenReturn(true);
+        when(repository.findByCustomerId("customer-1")).thenReturn(Optional.empty());
 
         service.apply(event);
         service.apply(event);
 
         verify(repository, times(1)).save(org.mockito.ArgumentMatchers.any(CustomerSnapshot.class));
+        verify(processedEventRepository, times(1)).save(
+                org.mockito.ArgumentMatchers.any()
+        );
     }
 
     private CustomerEvent event(CustomerEventType type, Boolean status) {
         return new CustomerEvent(
+                UUID.fromString("11111111-1111-1111-1111-111111111111"),
                 type,
                 "customer-1",
                 "Jane Doe",

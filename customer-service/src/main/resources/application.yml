@@ -28,6 +28,10 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USERNAME:guest}
     password: ${RABBITMQ_PASSWORD:guest}
+    publisher-confirm-type: correlated
+    publisher-returns: true
+    template:
+      mandatory: true
 
 customer:
   messaging:
@@ -42,6 +46,7 @@ customer:
       maximum-retries: ${OUTBOX_MAXIMUM_RETRIES:5}
       fixed-delay: ${OUTBOX_FIXED_DELAY_MS:5000}
       initial-delay: ${OUTBOX_INITIAL_DELAY_MS:5000}
+      confirmation-timeout: ${OUTBOX_CONFIRMATION_TIMEOUT_MS:5000}
 
 management:
   endpoints:

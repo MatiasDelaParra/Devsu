@@ -1,6 +1,7 @@
 package com.devsu.account.repository;
 
 import com.devsu.account.domain.Account;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -22,5 +23,8 @@ public interface AccountRepository extends JpaRepository<Account, UUID> {
 
     List<Account> findByCustomerId(String customerId);
 
-    List<Account> findByCustomerIdOrderByAccountNumberAsc(String customerId);
+    List<Account> findByCustomerIdAndCreatedAtBeforeOrderByAccountNumberAsc(
+            String customerId,
+            Instant createdBefore
+    );
 }

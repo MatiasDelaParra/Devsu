@@ -23,18 +23,12 @@ public class CustomerUniquenessValidator {
         }
     }
 
-    public void validateForUpdate(Customer customer, String identification, String customerId) {
+    public void validateForUpdate(Customer customer, String identification) {
         UUID customerPrimaryKey = customer.getId();
 
         if (hasChanged(identification, customer.getIdentification())
                 && customerRepository.existsByIdentificationAndIdNot(identification, customerPrimaryKey)) {
             throw DuplicateCustomerException.forIdentification(identification);
-        }
-
-        if (customerId != null
-                && hasChanged(customerId, customer.getCustomerId())
-                && customerRepository.existsByCustomerIdAndIdNot(customerId, customerPrimaryKey)) {
-            throw DuplicateCustomerException.forCustomerId(customerId);
         }
     }
 

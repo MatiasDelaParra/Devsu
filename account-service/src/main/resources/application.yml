@@ -38,6 +38,13 @@ account:
       exchange: ${CUSTOMER_EVENTS_EXCHANGE:customer.events}
       queue: ${ACCOUNT_CUSTOMER_EVENTS_QUEUE:account.customer-events.queue}
       routing-key: ${ACCOUNT_CUSTOMER_EVENTS_ROUTING_KEY:customer.#}
+      dead-letter-exchange: ${ACCOUNT_CUSTOMER_EVENTS_DLX:customer.events.dlx}
+      dead-letter-queue: ${ACCOUNT_CUSTOMER_EVENTS_DLQ:account.customer-events.dlq}
+      dead-letter-routing-key: ${ACCOUNT_CUSTOMER_EVENTS_DLQ_ROUTING_KEY:account.customer-events.dead}
+      maximum-attempts: ${ACCOUNT_CUSTOMER_EVENTS_MAXIMUM_ATTEMPTS:3}
+      initial-interval: ${ACCOUNT_CUSTOMER_EVENTS_INITIAL_INTERVAL_MS:500}
+      multiplier: ${ACCOUNT_CUSTOMER_EVENTS_RETRY_MULTIPLIER:2.0}
+      maximum-interval: ${ACCOUNT_CUSTOMER_EVENTS_MAXIMUM_INTERVAL_MS:5000}
 
 management:
   endpoints:

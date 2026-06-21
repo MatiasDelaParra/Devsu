@@ -293,11 +293,63 @@ class AccountApiIntegrationTest {
                 .andExpect(jsonPath("$.fechaHasta").value("2026-06-30"))
                 .andExpect(jsonPath("$.cuentas.length()").value(2))
                 .andExpect(jsonPath("$.cuentas[0].numeroCuenta").value("100001"))
+                .andExpect(jsonPath("$.cuentas[0].saldoDisponible").value(1950))
                 .andExpect(jsonPath("$.cuentas[0].movimientos.length()").value(2))
                 .andExpect(jsonPath("$.cuentas[0].movimientos[0].valor").value(-100))
                 .andExpect(jsonPath("$.cuentas[0].movimientos[1].valor").value(50))
                 .andExpect(jsonPath("$.cuentas[1].numeroCuenta").value("100002"))
+                .andExpect(jsonPath("$.cuentas[1].saldoDisponible").value(2000))
                 .andExpect(jsonPath("$.cuentas[1].movimientos.length()").value(0));
+    }
+
+    @Test
+    void getReportReturnsHistoricalClosingBalanceInsteadOfCurrentBalance() throws Exception {
+        Account historicalAccount = accountRepository.save(Account.builder()
+                .accountNumber("300001")
+                .accountType(AccountType.CHECKING)
+                .initialBalance(new BigDecimal("100.00"))
+                .currentBalance(new BigDecimal("700.00"))
+                .status(true)
+                .customerId(CUSTOMER_ID)
+                .createdAt(Instant.parse("2019-01-01T00:00:00Z"))
+                .updatedAt(Instant.parse("2026-06-20T12:00:00Z"))
+                .build());
+        movementRepository.save(movement(
+                historicalAccount,
+                "2026-06-20T12:00:00Z",
+                new BigDecimal("600.00"),
+                new BigDecimal("700.00")
+        ));
+
+        mockMvc.perform(get("/api/reportes")
+                        .param("fecha", "2020-01-01,2020-01-31")
+                        .param("cliente", CUSTOMER_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cuentas.length()").value(1))
+                .andExpect(jsonPath("$.cuentas[0].numeroCuenta").value("300001"))
+                .andExpect(jsonPath("$.cuentas[0].saldoInicial").value(100))
+                .andExpect(jsonPath("$.cuentas[0].saldoDisponible").value(100))
+                .andExpect(jsonPath("$.cuentas[0].movimientos.length()").value(0));
+    }
+
+    @Test
+    void getReportExcludesAccountsCreatedAfterRequestedPeriod() throws Exception {
+        accountRepository.save(Account.builder()
+                .accountNumber("300002")
+                .accountType(AccountType.SAVINGS)
+                .initialBalance(new BigDecimal("500.00"))
+                .currentBalance(new BigDecimal("500.00"))
+                .status(true)
+                .customerId(CUSTOMER_ID)
+                .createdAt(Instant.parse("2021-01-01T00:00:00Z"))
+                .updatedAt(Instant.parse("2021-01-01T00:00:00Z"))
+                .build());
+
+        mockMvc.perform(get("/api/reportes")
+                        .param("fecha", "2020-01-01,2020-01-31")
+                        .param("cliente", CUSTOMER_ID))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cuentas.length()").value(0));
     }
 
     @Test

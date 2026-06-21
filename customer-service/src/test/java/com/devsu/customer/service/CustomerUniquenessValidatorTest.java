@@ -47,10 +47,9 @@ class CustomerUniquenessValidatorTest {
         UUID id = UUID.randomUUID();
         Customer customer = customer(id);
 
-        validator.validateForUpdate(customer, "0102030405", "CUS-001");
+        validator.validateForUpdate(customer, "0102030405");
 
         verify(customerRepository, never()).existsByIdentificationAndIdNot("0102030405", id);
-        verify(customerRepository, never()).existsByCustomerIdAndIdNot("CUS-001", id);
     }
 
     @Test
@@ -59,7 +58,7 @@ class CustomerUniquenessValidatorTest {
         Customer customer = customer(id);
         when(customerRepository.existsByIdentificationAndIdNot("9999999999", id)).thenReturn(true);
 
-        assertThatThrownBy(() -> validator.validateForUpdate(customer, "9999999999", null))
+        assertThatThrownBy(() -> validator.validateForUpdate(customer, "9999999999"))
                 .isInstanceOf(DuplicateCustomerException.class);
     }
 

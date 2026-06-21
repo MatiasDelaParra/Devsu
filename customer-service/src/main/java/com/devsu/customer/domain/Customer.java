@@ -11,11 +11,9 @@ import jakarta.validation.constraints.Size;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
 @Getter
-@Setter
 @SuperBuilder
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
@@ -31,7 +29,7 @@ public class Customer extends Person {
 
     @NotBlank
     @Size(max = 50)
-    @Column(name = "customer_id", nullable = false, length = 50)
+    @Column(name = "customer_id", nullable = false, updatable = false, length = 50)
     private String customerId;
 
     @NotBlank

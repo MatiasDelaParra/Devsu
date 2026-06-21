@@ -1,8 +1,3 @@
--- Banking microservices consolidated PostgreSQL schema.
--- The Docker deployment uses one database per bounded context:
---   customer_db: execute the "customer" section.
---   account_db:  execute the "account" section.
--- Flyway remains the source of truth for incremental migrations.
 
 -- ============================================================
 -- customer-service / customer_db
@@ -112,6 +107,12 @@ CREATE TABLE account.movements (
         )
 );
 
+CREATE TABLE account.processed_customer_events (
+    event_id UUID PRIMARY KEY,
+    customer_id VARCHAR(50) NOT NULL,
+    processed_at TIMESTAMP WITH TIME ZONE NOT NULL
+);
+
 CREATE INDEX idx_customer_snapshots_customer_id
     ON account.customer_snapshots (customer_id);
 
@@ -123,3 +124,6 @@ CREATE INDEX idx_accounts_account_number
 
 CREATE INDEX idx_movements_account_date
     ON account.movements (account_id, occurred_at DESC);
+
+CREATE INDEX idx_processed_customer_events_customer_id
+    ON account.processed_customer_events (customer_id);

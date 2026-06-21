@@ -41,5 +41,6 @@ public class CustomerEventMessagingProperties {
         private int maximumRetries = 5;
         private long fixedDelay = 5000;
         private long initialDelay = 5000;
+        private long confirmationTimeout = 5000;
     }
 }

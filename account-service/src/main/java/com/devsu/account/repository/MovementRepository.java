@@ -28,6 +28,21 @@ public interface MovementRepository extends JpaRepository<Movement, UUID> {
 
     Optional<Movement> findByReversalOfId(UUID movementId);
 
+    @Query(value = """
+            SELECT DISTINCT ON (movement.account_id)
+                   movement.account_id AS "accountId",
+                   movement.balance AS "balance"
+            FROM account.movements movement
+            JOIN account.accounts account ON account.id = movement.account_id
+            WHERE account.customer_id = :customerId
+              AND movement.occurred_at < :toExclusive
+            ORDER BY movement.account_id, movement.occurred_at DESC, movement.id DESC
+            """, nativeQuery = true)
+    List<AccountBalanceSnapshot> findClosingBalances(
+            @Param("customerId") String customerId,
+            @Param("toExclusive") Instant toExclusive
+    );
+
     @Query("""
             select movement
             from Movement movement

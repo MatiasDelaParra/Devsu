@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.Map;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.core.Message;
 import org.springframework.stereotype.Component;
@@ -32,6 +33,7 @@ public class CustomerEventMessageMapper {
             JsonNode payload = payloadNode(root);
             CustomerEventType type = resolveType(message, root);
             return new CustomerEvent(
+                    eventId(message, root),
                     type,
                     text(payload, "customerId"),
                     text(payload, "name"),
@@ -43,6 +45,22 @@ public class CustomerEventMessageMapper {
             throw exception;
         } catch (Exception exception) {
             throw new InvalidCustomerEventException("Malformed customer event payload", exception);
+        }
+    }
+
+    private UUID eventId(Message message, JsonNode root) {
+        Object header = firstNonNull(
+                message.getMessageProperties().getHeaders().get("eventId"),
+                message.getMessageProperties().getHeaders().get("x-event-id")
+        );
+        String value = header == null ? text(root, "eventId") : header.toString();
+        if (!StringUtils.hasText(value)) {
+            throw new InvalidCustomerEventException("Customer event id is required");
+        }
+        try {
+            return UUID.fromString(value);
+        } catch (IllegalArgumentException exception) {
+            throw new InvalidCustomerEventException("Invalid customer event id", exception);
         }
     }
 

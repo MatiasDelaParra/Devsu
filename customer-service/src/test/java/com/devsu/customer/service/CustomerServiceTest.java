@@ -12,6 +12,7 @@ import com.devsu.customer.event.CustomerEventFactory;
 import com.devsu.customer.event.CustomerEventType;
 import com.devsu.customer.exception.BusinessException;
 import com.devsu.customer.exception.CustomerNotFoundException;
+import com.devsu.customer.exception.ImmutableCustomerIdException;
 import com.devsu.customer.mapper.CustomerMapper;
 import com.devsu.customer.outbox.OutboxEvent;
 import com.devsu.customer.outbox.OutboxEventRepository;
@@ -110,7 +111,7 @@ class CustomerServiceTest {
         assertThat(updatedCustomer).isSameAs(customer);
         assertThat(customer.getPassword()).isEqualTo("new-encoded-secret");
         assertThat(customer.getStatus()).isFalse();
-        verify(uniquenessValidator).validateForUpdate(customer, "9999999999", "CUS-002");
+        verify(uniquenessValidator).validateForUpdate(customer, "9999999999");
         verify(customerMapper).updateCustomer(command, customer);
         verify(outboxEventRepository).save(event);
         verify(customerRepository, never()).save(any(Customer.class));
@@ -127,6 +128,33 @@ class CustomerServiceTest {
 
         assertThat(updatedCustomer.getStatus()).isFalse();
         verify(outboxEventRepository).save(event);
+    }
+
+    @Test
+    void rejectsChangingCustomerIdBeforeMutatingCustomer() {
+        Customer customer = customer();
+        UpdateCustomerCommand command = UpdateCustomerCommand.builder()
+                .name("Jane Smith")
+                .gender("FEMALE")
+                .age(31)
+                .identification("9999999999")
+                .address("456 New Avenue")
+                .phone("0988888888")
+                .customerId("CUS-002")
+                .build();
+        when(customerRepository.findByCustomerId("CUS-001")).thenReturn(Optional.of(customer));
+
+        assertThatThrownBy(() -> customerService.updateCustomer("CUS-001", command))
+                .isInstanceOf(ImmutableCustomerIdException.class)
+                .hasMessage("El clienteId no puede modificarse");
+
+        assertThat(customer.getCustomerId()).isEqualTo("CUS-001");
+        verify(uniquenessValidator, never()).validateForUpdate(
+                any(Customer.class),
+                any(String.class)
+        );
+        verify(customerMapper, never()).updateCustomer(any(), any());
+        verify(outboxEventRepository, never()).save(any());
     }
 
     @Test
@@ -173,7 +201,7 @@ class CustomerServiceTest {
                 .identification("9999999999")
                 .address("456 New Avenue")
                 .phone("0988888888")
-                .customerId("CUS-002")
+                .customerId("CUS-001")
                 .password("new-secret")
                 .status(false)
                 .build();

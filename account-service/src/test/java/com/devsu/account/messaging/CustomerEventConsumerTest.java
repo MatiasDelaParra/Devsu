@@ -9,6 +9,7 @@ import com.devsu.account.service.CustomerSnapshotService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.springframework.amqp.core.Message;
@@ -36,6 +37,7 @@ class CustomerEventConsumerTest {
                 """;
         MessageProperties properties = new MessageProperties();
         properties.setReceivedRoutingKey("customer.created");
+        properties.setHeader("eventId", "11111111-1111-1111-1111-111111111111");
         Message message = new Message(json.getBytes(StandardCharsets.UTF_8), properties);
 
         consumer.consume(message);
@@ -45,6 +47,8 @@ class CustomerEventConsumerTest {
         CustomerEvent event = eventCaptor.getValue();
         org.assertj.core.api.Assertions.assertThat(event.type())
                 .isEqualTo(CustomerEventType.CUSTOMER_CREATED);
+        org.assertj.core.api.Assertions.assertThat(event.eventId())
+                .isEqualTo(UUID.fromString("11111111-1111-1111-1111-111111111111"));
         org.assertj.core.api.Assertions.assertThat(event.customerId()).isEqualTo("customer-1");
     }
 

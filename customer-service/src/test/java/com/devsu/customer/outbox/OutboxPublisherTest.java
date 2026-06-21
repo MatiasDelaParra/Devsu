@@ -19,7 +19,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.amqp.AmqpException;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
@@ -31,7 +30,7 @@ class OutboxPublisherTest {
     private OutboxEventRepository outboxEventRepository;
 
     @Mock
-    private RabbitTemplate rabbitTemplate;
+    private CustomerEventPublisher customerEventPublisher;
 
     private CustomerEventMessagingProperties properties;
     private OutboxPublisher publisher;
@@ -43,7 +42,7 @@ class OutboxPublisherTest {
         properties.getPublisher().setMaximumRetries(3);
         publisher = new OutboxPublisher(
                 outboxEventRepository,
-                rabbitTemplate,
+                customerEventPublisher,
                 properties,
                 Clock.fixed(PUBLISHED_AT, ZoneOffset.UTC)
         );
@@ -59,11 +58,7 @@ class OutboxPublisherTest {
 
         publisher.publishPendingEvents();
 
-        verify(rabbitTemplate).convertAndSend(
-                "customer.events",
-                "customer.created",
-                event.getPayload()
-        );
+        verify(customerEventPublisher).publish(event);
         assertThat(event.getStatus()).isEqualTo(OutboxEventStatus.PUBLISHED);
         assertThat(event.getPublishedAt()).isEqualTo(PUBLISHED_AT);
         assertThat(event.getLastError()).isNull();
@@ -77,8 +72,8 @@ class OutboxPublisherTest {
                 any(Pageable.class)
         )).thenReturn(List.of(event));
         doThrow(new AmqpException("RabbitMQ no disponible"))
-                .when(rabbitTemplate)
-                .convertAndSend("customer.events", "customer.created", event.getPayload());
+                .when(customerEventPublisher)
+                .publish(event);
 
         publisher.publishPendingEvents();
 
@@ -105,8 +100,8 @@ class OutboxPublisherTest {
                 any(Pageable.class)
         )).thenReturn(List.of(event));
         doThrow(new AmqpException("RabbitMQ no disponible"))
-                .when(rabbitTemplate)
-                .convertAndSend("customer.events", "customer.created", event.getPayload());
+                .when(customerEventPublisher)
+                .publish(event);
 
         publisher.publishPendingEvents();
 
