@@ -1,0 +1,256 @@
+{
+  "info": {
+    "_postman_id": "7d6c264f-659d-43d3-a88e-c8d2f07ba91c",
+    "name": "Devsu Banking Microservices - Casos de uso",
+    "description": "Flujo de validación de clientes, cuentas, movimientos, saldo no disponible y reporte. Ejecutar sobre bases de datos limpias.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "customerBaseUrl", "value": "http://localhost:8081" },
+    { "key": "accountBaseUrl", "value": "http://localhost:8082" },
+    { "key": "today", "value": "" }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "pm.collectionVariables.set('today', new Date().toISOString().slice(0, 10));"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Clientes",
+      "item": [
+        {
+          "name": "Crear Jose Lema",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Jose Lema\",\n  \"genero\": \"Masculino\",\n  \"edad\": 35,\n  \"identificacion\": \"1710000001\",\n  \"direccion\": \"Otavalo sn y principal\",\n  \"telefono\": \"098254785\",\n  \"clienteId\": \"CLI-JOSE\",\n  \"contrasena\": \"1234\",\n  \"estado\": true\n}"
+            },
+            "url": "{{customerBaseUrl}}/api/clientes"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Cliente Jose creado', () => pm.response.to.have.status(201));",
+                "pm.test('La contraseña no se expone', () => pm.expect(pm.response.json()).not.to.have.property('contrasena'));"
+              ]
+            }
+          }]
+        },
+        {
+          "name": "Crear Marianela Montalvo",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Marianela Montalvo\",\n  \"genero\": \"Femenino\",\n  \"edad\": 32,\n  \"identificacion\": \"1710000002\",\n  \"direccion\": \"Amazonas y NNUU\",\n  \"telefono\": \"097548965\",\n  \"clienteId\": \"CLI-MARIANELA\",\n  \"contrasena\": \"5678\",\n  \"estado\": true\n}"
+            },
+            "url": "{{customerBaseUrl}}/api/clientes"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": ["pm.test('Cliente Marianela creado', () => pm.response.to.have.status(201));"]
+            }
+          }]
+        },
+        {
+          "name": "Crear Juan Osorio",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nombre\": \"Juan Osorio\",\n  \"genero\": \"Masculino\",\n  \"edad\": 29,\n  \"identificacion\": \"1710000003\",\n  \"direccion\": \"13 junio y Equinoccial\",\n  \"telefono\": \"098874587\",\n  \"clienteId\": \"CLI-JUAN\",\n  \"contrasena\": \"1245\",\n  \"estado\": true\n}"
+            },
+            "url": "{{customerBaseUrl}}/api/clientes"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": ["pm.test('Cliente Juan creado', () => pm.response.to.have.status(201));"]
+            }
+          }]
+        },
+        {
+          "name": "Esperar propagación asíncrona",
+          "request": {
+            "method": "GET",
+            "url": "{{accountBaseUrl}}/actuator/health"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["setTimeout(() => {}, 7000);"]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Account service disponible', () => pm.response.to.have.status(200));",
+                  "pm.test('Estado UP', () => pm.expect(pm.response.json().status).to.eql('UP'));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Cuentas",
+      "item": [
+        {
+          "name": "Crear cuenta 478758 de Jose",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"numeroCuenta\": \"478758\",\n  \"tipoCuenta\": \"Ahorros\",\n  \"saldoInicial\": 2000,\n  \"estado\": true,\n  \"clienteId\": \"CLI-JOSE\"\n}" },
+            "url": "{{accountBaseUrl}}/api/cuentas"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Cuenta 478758 creada', () => pm.response.to.have.status(201));"] } }]
+        },
+        {
+          "name": "Crear cuenta 225487 de Marianela",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"numeroCuenta\": \"225487\",\n  \"tipoCuenta\": \"Corriente\",\n  \"saldoInicial\": 100,\n  \"estado\": true,\n  \"clienteId\": \"CLI-MARIANELA\"\n}" },
+            "url": "{{accountBaseUrl}}/api/cuentas"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Cuenta 225487 creada', () => pm.response.to.have.status(201));"] } }]
+        },
+        {
+          "name": "Crear cuenta 495878 de Juan",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"numeroCuenta\": \"495878\",\n  \"tipoCuenta\": \"Ahorros\",\n  \"saldoInicial\": 0,\n  \"estado\": true,\n  \"clienteId\": \"CLI-JUAN\"\n}" },
+            "url": "{{accountBaseUrl}}/api/cuentas"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Cuenta 495878 creada', () => pm.response.to.have.status(201));"] } }]
+        },
+        {
+          "name": "Crear cuenta 496825 de Marianela",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"numeroCuenta\": \"496825\",\n  \"tipoCuenta\": \"Ahorros\",\n  \"saldoInicial\": 540,\n  \"estado\": true,\n  \"clienteId\": \"CLI-MARIANELA\"\n}" },
+            "url": "{{accountBaseUrl}}/api/cuentas"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Cuenta 496825 creada', () => pm.response.to.have.status(201));"] } }]
+        },
+        {
+          "name": "Crear nueva cuenta corriente 585545 de Jose",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"numeroCuenta\": \"585545\",\n  \"tipoCuenta\": \"Corriente\",\n  \"saldoInicial\": 1000,\n  \"estado\": true,\n  \"clienteId\": \"CLI-JOSE\"\n}" },
+            "url": "{{accountBaseUrl}}/api/cuentas"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Cuenta 585545 creada', () => pm.response.to.have.status(201));"] } }]
+        }
+      ]
+    },
+    {
+      "name": "3. Movimientos",
+      "item": [
+        {
+          "name": "Retiro de 575 - 478758",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"numeroCuenta\": \"478758\",\n  \"valor\": -575\n}" },
+            "url": "{{accountBaseUrl}}/api/movimientos"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Retiro aplicado', () => pm.response.to.have.status(201));", "pm.test('Saldo 1425', () => pm.expect(pm.response.json().saldo).to.eql(1425));"] } }]
+        },
+        {
+          "name": "Depósito de 600 - 225487",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"numeroCuenta\": \"225487\",\n  \"valor\": 600\n}" },
+            "url": "{{accountBaseUrl}}/api/movimientos"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Depósito aplicado', () => pm.response.to.have.status(201));", "pm.test('Saldo 700', () => pm.expect(pm.response.json().saldo).to.eql(700));"] } }]
+        },
+        {
+          "name": "Depósito de 150 - 495878",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"numeroCuenta\": \"495878\",\n  \"valor\": 150\n}" },
+            "url": "{{accountBaseUrl}}/api/movimientos"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Depósito aplicado', () => pm.response.to.have.status(201));", "pm.test('Saldo 150', () => pm.expect(pm.response.json().saldo).to.eql(150));"] } }]
+        },
+        {
+          "name": "Retiro de 540 - 496825",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"numeroCuenta\": \"496825\",\n  \"valor\": -540\n}" },
+            "url": "{{accountBaseUrl}}/api/movimientos"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Retiro total aplicado', () => pm.response.to.have.status(201));", "pm.test('Saldo cero', () => pm.expect(pm.response.json().saldo).to.eql(0));"] } }]
+        },
+        {
+          "name": "Validar Saldo no disponible - 496825",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"numeroCuenta\": \"496825\",\n  \"valor\": -1\n}" },
+            "url": "{{accountBaseUrl}}/api/movimientos"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('Retorna 400', () => pm.response.to.have.status(400));", "pm.test('Mensaje esperado', () => pm.expect(pm.response.json().message).to.eql('Saldo no disponible'));"] } }]
+        }
+      ]
+    },
+    {
+      "name": "4. Reporte",
+      "item": [
+        {
+          "name": "Estado de cuenta de Marianela",
+          "request": {
+            "method": "GET",
+            "url": "{{accountBaseUrl}}/api/reportes?fecha={{today}},{{today}}&cliente=CLI-MARIANELA"
+          },
+          "event": [{
+            "listen": "test",
+            "script": {
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Reporte generado', () => pm.response.to.have.status(200));",
+                "const report = pm.response.json();",
+                "pm.test('Cliente correcto', () => pm.expect(report.cliente).to.eql('Marianela Montalvo'));",
+                "pm.test('Incluye sus dos cuentas', () => pm.expect(report.cuentas).to.have.lengthOf(2));",
+                "const byNumber = Object.fromEntries(report.cuentas.map(account => [account.numeroCuenta, account]));",
+                "pm.test('Cuenta 225487 termina en 700', () => pm.expect(byNumber['225487'].saldoDisponible).to.eql(700));",
+                "pm.test('Cuenta 496825 termina en 0', () => pm.expect(byNumber['496825'].saldoDisponible).to.eql(0));",
+                "pm.test('Incluye depósito de 600', () => pm.expect(byNumber['225487'].movimientos.some(m => m.valor === 600)).to.be.true);",
+                "pm.test('Incluye retiro de 540', () => pm.expect(byNumber['496825'].movimientos.some(m => m.valor === -540)).to.be.true);"
+              ]
+            }
+          }]
+        }
+      ]
+    }
+  ]
+}
